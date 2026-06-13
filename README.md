@@ -4,13 +4,13 @@
 
 | 作業 | 主題 | 技術棧 | 說明 |
 |------|------|--------|------|
-| [Homework01](Homework01/) | C 語言編譯器 + 虛擬機 | C | 自訂 mini-language 的編譯器（Lexer + Recursive Descent Parser），產生四元組中介碼（Quadruple IR），並以堆疊框架 VM 執行。支援函式、while 迴圈、if 條件、遞迴呼叫。 |
-| [Homework02](Homework02/) | NumScript 迷你語言 + 堆疊機 | Python | 專注數值計算的 DSL，具備 REPL 與檔案執行雙模式。包含正規表達式 Lexer、遞迴下降編譯器（產生 bytecode）、堆疊式虛擬機。支援函式呼叫（sqrt, sin, cos, abs）、冪次運算。 |
-| [Homework03](Homework03/) | 天氣查詢 + Todo List 單頁應用 | HTML / CSS / JavaScript | 單檔 PWA，提供 22 個台灣城市按鈕、搜尋框、地理定位功能。動態主題（依天氣/溫度/晝夜變換 10 種配色），整合 Open-Meteo API（免 API Key）。 |
-| [Homework04](Homework04/) | 網路通訊教材（8 章） | Markdown | 從 OSI/TCP-IP 模型到 HTTP/3 與 QUIC 的系統性教材。涵蓋 Socket API、TCP/UDP 程式設計、I/O 多工（select/poll/epoll）、HTTP 伺服器實作、TLS 與安全優化。 |
-| [Homework05](Homework05/) | 執行緒同步與死結 | C / POSIX pthreads | 三支程式：銀行交易（Race condition vs Mutex）、生產者消費者（Condition Variable）、哲學家聚餐（Deadlock 演示與修復）。 |
-| [Homework06](Homework06/) | 行程管理與檔案 I/O | C / POSIX system calls | 七支程式循序演示 UNIX 系統程式設計：fork、exec、wait、open/read/write、dup2 重導向、pipe IPC、Shell 風格的 `>` 與 `<` 重導向。 |
-| [mini_WIreshark](mini_WIreshark/) | 原始封包嗅探器（期末專題） | Python / Raw Socket | 使用 AF_PACKET 原始 socket 繞過核心網路堆疊，直接擷取並解析 Ethernet 訊框、IPv4 封包、TCP/UDP 協定。 |
+| [Homework01](Homework01/) | C 語言編譯器 + 虛擬機 | C | 自訂的編譯器。 |
+| [Homework02](Homework02/) | NumScript 迷你語言 + 堆疊機 | Python | 專注數值計算。 |
+| [Homework03](Homework03/) | 天氣查詢 + Todo List 單頁應用 | HTML / CSS / JavaScript | 提供 22 個台灣城市按鈕、搜尋框、地理定位功能。 |
+| [Homework04](Homework04/) | 網路通訊教材（8 章） | Markdown | 從 OSI/TCP-IP 模型到 HTTP/3 與 QUIC 的系統性教材。 |
+| [Homework05](Homework05/) | 執行緒同步與死結 | C / POSIX pthreads | 三支程式：銀行交易、生產者消費者、哲學家聚餐。 |
+| [Homework06](Homework06/) | 行程管理與檔案 I/O | C / POSIX system calls | fork、exec、wait、open/read/write、dup2。 |
+| [mini_WIreshark](mini_WIreshark/) | 原始封包嗅探器（期末專題） | Python / Raw Socket | 擷取並解析 Ethernet 訊框、IPv4 封包、TCP/UDP 協定。 |
 
 ## 各作業詳細內容
 

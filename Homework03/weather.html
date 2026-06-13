@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天氣小幫手 + 待辦事項</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 1s ease;
+    padding: 16px;
+  }
+  .weather-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1; transition: background 1.5s ease;
+  }
+  .weather-bg::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 60%);
+  }
+
+  .app {
+    display: flex; gap: 16px; width: 1100px; max-width: 100%;
+    align-items: stretch;
+  }
+
+  /* ===== Sidebar common ===== */
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 20px 14px;
+    transition: background 1s ease;
+    max-height: 640px;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-title {
+    font-size: 15px; font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 14px; text-align: center;
+    letter-spacing: 0.5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+
+  /* ===== Left — City list ===== */
+  .city-list {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+  }
+  .city-list::-webkit-scrollbar { width: 4px; }
+  .city-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+  .city-btn {
+    padding: 9px 12px; border: none; border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.8); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .city-btn:hover {
+    background: rgba(255,255,255,0.16);
+    transform: translateX(3px);
+  }
+  .city-btn.active {
+    background: rgba(255,255,255,0.22);
+    color: #fff; font-weight: 600;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+  }
+  .city-btn .city-emoji { font-size: 16px; }
+
+  /* ===== Center — Weather ===== */
+  .container {
+    flex: 1; min-width: 0;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 32px;
+    padding: 32px 28px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: background 1s ease, box-shadow 1s ease;
+  }
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .header h1 {
+    font-size: 20px; font-weight: 600;
+    color: rgba(255,255,255,0.95);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .locate-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 17px; padding: 4px 8px; border-radius: 10px;
+    transition: background 0.2s; color: rgba(255,255,255,0.7);
+    margin-left: auto;
+  }
+  .locate-btn:hover { background: rgba(255,255,255,0.15); }
+  .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
+  .search-box input {
+    flex: 1; padding: 10px 16px; border: none; border-radius: 14px;
+    font-size: 14px; outline: none;
+    background: rgba(255,255,255,0.20);
+    color: #fff;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .search-box input::placeholder { color: rgba(255,255,255,0.5); }
+  .search-box input:focus {
+    background: rgba(255,255,255,0.30);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+  }
+  .search-box button {
+    padding: 10px 18px; border: none; border-radius: 14px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.22);
+    color: #fff; transition: all 0.25s;
+  }
+  .search-box button:hover {
+    background: rgba(255,255,255,0.38);
+    transform: scale(1.03);
+  }
+  .search-box button:active { transform: scale(0.96); }
+  .weather-icon {
+    font-size: 72px; text-align: center; margin: 2px 0 8px;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.10));
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  .temp {
+    font-size: 60px; font-weight: 700; text-align: center;
+    color: #fff; text-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    line-height: 1.1;
+  }
+  .temp-unit { font-size: 24px; font-weight: 400; vertical-align: super; }
+  .description {
+    text-align: center; font-size: 17px; font-weight: 500;
+    color: rgba(255,255,255,0.9); margin: 2px 0 16px;
+  }
+  .city-name {
+    text-align: center; font-size: 18px; font-weight: 500;
+    color: rgba(255,255,255,0.85); margin-bottom: 2px;
+  }
+  .details {
+    display: flex; justify-content: space-around;
+    background: rgba(255,255,255,0.10);
+    border-radius: 18px; padding: 14px 10px; margin-bottom: 18px;
+    backdrop-filter: blur(4px);
+  }
+  .detail-item { text-align: center; flex: 1; }
+  .detail-item .label {
+    font-size: 11px; text-transform: uppercase;
+    color: rgba(255,255,255,0.55); letter-spacing: 0.5px;
+  }
+  .detail-item .value {
+    font-size: 17px; font-weight: 600;
+    color: rgba(255,255,255,0.95); margin-top: 3px;
+  }
+  .suggestion {
+    background: rgba(255,255,255,0.11);
+    border-radius: 16px; padding: 14px 18px;
+    text-align: center; font-size: 15px; font-weight: 500;
+    color: rgba(255,255,255,0.95);
+    backdrop-filter: blur(4px);
+    min-height: 48px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .error-msg {
+    text-align: center; color: rgba(255,200,200,0.9);
+    font-size: 13px; margin-top: 10px; min-height: 20px;
+  }
+  .loading {
+    text-align: center; color: rgba(255,255,255,0.7);
+    font-size: 13px; margin-top: 10px; min-height: 20px;
+  }
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.7s linear infinite; vertical-align: middle;
+    margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .footer {
+    text-align: center; margin-top: 16px;
+    font-size: 11px; color: rgba(255,255,255,0.3);
+  }
+
+  /* ===== Right — Todo ===== */
+  .todo-input-row {
+    display: flex; gap: 6px; margin-bottom: 12px;
+  }
+  .todo-input-row input {
+    flex: 1; padding: 9px 14px; border: none; border-radius: 12px;
+    font-size: 13px; outline: none;
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    transition: background 0.3s;
+  }
+  .todo-input-row input::placeholder { color: rgba(255,255,255,0.5); }
+  .todo-input-row input:focus {
+    background: rgba(255,255,255,0.28);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.2);
+  }
+  .todo-input-row button {
+    padding: 9px 14px; border: none; border-radius: 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    background: rgba(255,255,255,0.20);
+    color: #fff; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .todo-input-row button:hover { background: rgba(255,255,255,0.35); }
+  .todo-list {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+  }
+  .todo-list::-webkit-scrollbar { width: 4px; }
+  .todo-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+  .todo-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    transition: all 0.2s;
+  }
+  .todo-item:hover { background: rgba(255,255,255,0.10); }
+  .todo-item.done .todo-text {
+    text-decoration: line-through; opacity: 0.5;
+  }
+  .todo-check {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: transparent; cursor: pointer;
+    flex-shrink: 0; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: transparent;
+  }
+  .todo-check.checked {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.4);
+    color: #fff;
+  }
+  .todo-text {
+    flex: 1; font-size: 13px; color: rgba(255,255,255,0.85);
+    word-break: break-word;
+    transition: all 0.2s;
+  }
+  .todo-del {
+    background: none; border: none; cursor: pointer;
+    font-size: 14px; color: rgba(255,255,255,0.3);
+    padding: 2px 4px; border-radius: 6px;
+    transition: all 0.2s; opacity: 0;
+    flex-shrink: 0;
+  }
+  .todo-item:hover .todo-del { opacity: 1; }
+  .todo-del:hover { color: rgba(255,150,150,0.9); background: rgba(255,0,0,0.1); }
+  .todo-empty {
+    text-align: center; color: rgba(255,255,255,0.35);
+    font-size: 13px; margin-top: 30px;
+  }
+  .todo-stats {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: rgba(255,255,255,0.45);
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 860px) {
+    .app { flex-direction: column; align-items: center; }
+    .sidebar { width: 100%; max-height: none; }
+    .sidebar.city-sidebar { max-height: 180px; }
+    .city-list {
+      flex-direction: row; flex-wrap: wrap; gap: 4px;
+    }
+    .city-btn { flex: 0 0 auto; font-size: 13px; padding: 7px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="weather-bg" id="weatherBg"></div>
+<div class="app">
+  <!-- LEFT: City list -->
+  <div class="sidebar city-sidebar" id="citySidebar">
+    <div class="sidebar-title">🏙 縣市</div>
+    <div class="city-list" id="cityList"></div>
+  </div>
+
+  <!-- CENTER: Weather -->
+  <div class="container" id="container">
+    <div class="header">
+      <h1>🌤 天氣小幫手</h1>
+      <button class="locate-btn" id="locateBtn" title="使用目前位置">📍</button>
+    </div>
+    <div class="search-box">
+      <input type="text" id="cityInput" placeholder="輸入城市名稱">
+      <button id="searchBtn">查詢</button>
+    </div>
+    <div id="resultArea">
+      <div class="weather-icon" id="weatherIcon">🌍</div>
+      <div class="city-name" id="cityName">--</div>
+      <div class="temp"><span id="tempValue">--</span><span class="temp-unit">°C</span></div>
+      <div class="description" id="weatherDesc">請輸入城市查詢天氣</div>
+      <div class="details">
+        <div class="detail-item"><div class="label">體感</div><div class="value" id="feelsLike">--°</div></div>
+        <div class="detail-item"><div class="label">濕度</div><div class="value" id="humidity">--%</div></div>
+        <div class="detail-item"><div class="label">風速</div><div class="value" id="windSpeed">-- km/h</div></div>
+      </div>
+      <div class="suggestion" id="suggestion">💡 輸入城市名稱開始查詢</div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="loading" id="loading"></div>
+    <div class="footer">🌱 為你的每一天做好準備</div>
+  </div>
+
+  <!-- RIGHT: Todo -->
+  <div class="sidebar todo-sidebar" id="todoSidebar">
+    <div class="sidebar-title">✅ 待辦事項</div>
+    <div class="todo-input-row">
+      <input type="text" id="todoInput" placeholder="新增待辦..." maxlength="120">
+      <button id="todoAddBtn">＋</button>
+    </div>
+    <div class="todo-list" id="todoList">
+      <div class="todo-empty" id="todoEmpty">還沒有待辦事項<br>趕快新增一筆吧！</div>
+    </div>
+    <div class="todo-stats" id="todoStats">
+      <span id="todoCount">0 項</span>
+      <span id="todoDoneCount">0 完成</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== Weather =====================
+const BG_COLORS = {
+  hot:      { bg: 'linear-gradient(135deg, #e74c3c, #c0392b, #a93226)', card: 'rgba(255,255,255,0.12)' },
+  warm:     { bg: 'linear-gradient(135deg, #f39c12, #e67e22, #d35400)', card: 'rgba(255,255,255,0.13)' },
+  mild:     { bg: 'linear-gradient(135deg, #2ecc71, #27ae60, #1e8449)', card: 'rgba(255,255,255,0.13)' },
+  cool:     { bg: 'linear-gradient(135deg, #3498db, #2980b9, #1a5276)', card: 'rgba(255,255,255,0.12)' },
+  cold:     { bg: 'linear-gradient(135deg, #5dade2, #2e86c1, #1b4f72)', card: 'rgba(255,255,255,0.11)' },
+  freezing: { bg: 'linear-gradient(135deg, #aed6f1, #85c1e9, #5dade2)', card: 'rgba(255,255,255,0.18)' },
+  night:    { bg: 'linear-gradient(135deg, #2c3e50, #1a252f, #0d1117)', card: 'rgba(255,255,255,0.08)' },
+  rain:     { bg: 'linear-gradient(135deg, #5d6d7e, #4a5568, #2c3e50)', card: 'rgba(255,255,255,0.09)' },
+  snow:     { bg: 'linear-gradient(135deg, #d5dbdb, #bdc3c7, #aeb6bf)', card: 'rgba(255,255,255,0.20)' },
+  storm:    { bg: 'linear-gradient(135deg, #4a235a, #2c0e37, #1a0a1e)', card: 'rgba(255,255,255,0.08)' },
+};
+
+const WMO_CODES = {
+  0:  { icon: '☀️', desc: '晴朗',      group: 'clear' },
+  1:  { icon: '🌤', desc: '多雲時晴',   group: 'clear' },
+  2:  { icon: '⛅', desc: '多雲',       group: 'cloudy' },
+  3:  { icon: '☁️', desc: '陰天',       group: 'cloudy' },
+  45: { icon: '🌫', desc: '霧',         group: 'fog' },
+  48: { icon: '🌫', desc: '霧淞',       group: 'fog' },
+  51: { icon: '🌦', desc: '小毛毛雨',   group: 'drizzle' },
+  53: { icon: '🌦', desc: '毛毛雨',     group: 'drizzle' },
+  55: { icon: '🌦', desc: '大毛毛雨',   group: 'drizzle' },
+  56: { icon: '🌧', desc: '凍毛毛雨',   group: 'drizzle' },
+  57: { icon: '🌧', desc: '凍毛毛雨',   group: 'drizzle' },
+  61: { icon: '🌧', desc: '小雨',       group: 'rain' },
+  63: { icon: '🌧', desc: '中雨',       group: 'rain' },
+  65: { icon: '🌧', desc: '大雨',       group: 'rain' },
+  66: { icon: '🌧', desc: '凍雨',       group: 'rain' },
+  67: { icon: '🌧', desc: '凍雨',       group: 'rain' },
+  71: { icon: '🌨', desc: '小雪',       group: 'snow' },
+  73: { icon: '🌨', desc: '中雪',       group: 'snow' },
+  75: { icon: '🌨', desc: '大雪',       group: 'snow' },
+  77: { icon: '❄️', desc: '雪粒',       group: 'snow' },
+  80: { icon: '🌦', desc: '陣雨',       group: 'rain' },
+  81: { icon: '🌧', desc: '中陣雨',     group: 'rain' },
+  82: { icon: '🌧', desc: '大陣雨',     group: 'rain' },
+  85: { icon: '🌨', desc: '小陣雪',     group: 'snow' },
+  86: { icon: '🌨', desc: '大陣雪',     group: 'snow' },
+  95: { icon: '⛈', desc: '雷雨',       group: 'storm' },
+  96: { icon: '⛈', desc: '雷雨伴冰雹', group: 'storm' },
+  99: { icon: '⛈', desc: '強雷雨伴冰雹',group: 'storm' },
+};
+
+const TAIWAN_CITIES = [
+  { name: '臺北市',   en: 'taipei',      emoji: '🏛', lat: 25.0330, lon: 121.5654 },
+  { name: '新北市',   en: 'new taipei',  emoji: '🏞', lat: 25.0169, lon: 121.4627 },
+  { name: '桃園市',   en: 'taoyuan',     emoji: '✈', lat: 24.9936, lon: 121.3010 },
+  { name: '臺中市',   en: 'taichung',    emoji: '🌳', lat: 24.1477, lon: 120.6736 },
+  { name: '臺南市',   en: 'tainan',      emoji: '🏯', lat: 22.9997, lon: 120.2270 },
+  { name: '高雄市',   en: 'kaohsiung',   emoji: '⚓', lat: 22.6273, lon: 120.3014 },
+  { name: '基隆市',   en: 'keelung',     emoji: '⛵', lat: 25.1276, lon: 121.7392 },
+  { name: '新竹市',   en: 'hsinchu',     emoji: '🔬', lat: 24.8138, lon: 120.9675 },
+  { name: '新竹縣',   en: 'hsinchu co',  emoji: '🏔', lat: 24.8382, lon: 121.0167 },
+  { name: '苗栗縣',   en: 'miaoli',      emoji: '🌄', lat: 24.5602, lon: 120.8214 },
+  { name: '彰化縣',   en: 'changhua',    emoji: '🌻', lat: 24.0517, lon: 120.5375 },
+  { name: '南投縣',   en: 'nantou',      emoji: '🏔', lat: 23.8383, lon: 120.9876 },
+  { name: '雲林縣',   en: 'yunlin',      emoji: '🌾', lat: 23.7092, lon: 120.4313 },
+  { name: '嘉義市',   en: 'chiayi',      emoji: '🍚', lat: 23.4800, lon: 120.4491 },
+  { name: '嘉義縣',   en: 'chiayi co',   emoji: '🌲', lat: 23.4518, lon: 120.2556 },
+  { name: '屏東縣',   en: 'pingtung',    emoji: '🌴', lat: 22.5519, lon: 120.5487 },
+  { name: '宜蘭縣',   en: 'yilan',       emoji: '🌊', lat: 24.7021, lon: 121.7377 },
+  { name: '花蓮縣',   en: 'hualien',     emoji: '🏖', lat: 23.9871, lon: 121.6010 },
+  { name: '臺東縣',   en: 'taitung',     emoji: '🏝', lat: 22.7549, lon: 121.0535 },
+  { name: '澎湖縣',   en: 'penghu',      emoji: '🏝', lat: 23.5711, lon: 119.5793 },
+  { name: '金門縣',   en: 'kinmen',      emoji: '🏯', lat: 24.4361, lon: 118.3187 },
+  { name: '連江縣',   en: 'lienchiang',  emoji: '🏝', lat: 26.1500, lon: 119.9333 },
+];
+
+const SUGGESTIONS = {
+  clear:   ['☀️ 天氣晴朗，適合出門走走！', '🧴 記得防曬，保護肌膚！', '🌳 去公園散步或慢跑吧！'],
+  cloudy:  ['☁️ 舒適的天氣，適合各類活動', '📸 雲彩變化豐富，拍照好時機', '🌿 出門走走很舒服'],
+  rain:    ['☂️ 記得帶傘！', '🏠 下雨天適合在家看書', '🚗 開車請注意路況'],
+  drizzle: ['☂️ 帶把小傘以防萬一', '🌧 細雨中散步別有風味', '💧 空氣清新，深呼吸吧'],
+  snow:    ['🧣 下雪了！注意保暖！', '❄️ 路面濕滑，行走小心', '☕ 來杯熱飲暖暖身子'],
+  storm:   ['⛈ 雷雨將至，待在室內', '⚡ 關閉電器避免雷擊', '🏠 安全第一，不要外出'],
+  fog:     ['🌫 能見度低，開車請減速', '💡 開霧燈保持安全距離', '⏰ 霧散後再出門'],
+  night:   ['🌙 夜晚涼爽，早點休息', '😴 明天又是美好的一天', '✨ 睡個好覺養足精神'],
+};
+
+// ===================== Weather logic =====================
+function getSuggestion(weatherGroup, temp) {
+  const pool = SUGGESTIONS[weatherGroup] || SUGGESTIONS.clear;
+  let s = pool[Math.floor(Math.random() * pool.length)];
+  if (temp >= 35) s = '🥵 酷暑高溫！儘量避免戶外活動，多喝水！';
+  else if (temp >= 30) s = '🍉 天氣炎熱，多補充水分，小心中暑！';
+  else if (temp <= 0)  s = '🧊 天寒地凍！注意保暖！';
+  else if (temp <= 8)  s = '🧥 天氣寒冷，出門多加件衣服！';
+  return s;
+}
+
+function setTheme(weatherCode, temp, isDay) {
+  const bg = document.getElementById('weatherBg');
+  const els = [document.getElementById('container'), document.getElementById('citySidebar'), document.getElementById('todoSidebar')];
+  let theme;
+  if (weatherCode >= 95) theme = BG_COLORS.storm;
+  else if (weatherCode >= 71 && weatherCode <= 86) theme = BG_COLORS.snow;
+  else if ((weatherCode >= 61 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)) theme = BG_COLORS.rain;
+  else if (!isDay) theme = BG_COLORS.night;
+  else if (temp >= 30) theme = BG_COLORS.hot;
+  else if (temp >= 22) theme = BG_COLORS.warm;
+  else if (temp >= 15) theme = BG_COLORS.mild;
+  else if (temp >= 5)  theme = BG_COLORS.cool;
+  else if (temp >= -5) theme = BG_COLORS.cold;
+  else theme = BG_COLORS.freezing;
+  bg.style.background = theme.bg;
+  els.forEach(el => { if (el) el.style.background = theme.card; });
+}
+
+async function geocode(city) {
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=5&language=zh&format=json`);
+  if (!r.ok) throw new Error('地理編碼服務無法使用');
+  const data = await r.json();
+  if (!data.results || data.results.length === 0) throw new Error('找不到該城市');
+  return data.results[0];
+}
+
+async function fetchWeather(lat, lon) {
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=auto`);
+  if (!r.ok) throw new Error('天氣服務暫時無法使用');
+  return r.json();
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${lat},${lon}&count=1&language=zh&format=json`);
+    const d = await r.json();
+    if (d.results && d.results.length > 0) return d.results[0].name;
+  } catch {}
+  return `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+}
+
+function updateUI(data, cityName) {
+  const c = data.current;
+  const temp = Math.round(c.temperature_2m);
+  const feels = Math.round(c.apparent_temperature);
+  const hum = c.relative_humidity_2m;
+  const wind = c.wind_speed_10m;
+  const code = c.weather_code;
+  const isDay = c.is_day === 1;
+  const wmo = WMO_CODES[code] || { icon: '🌍', desc: '未知', group: 'cloudy' };
+
+  document.getElementById('weatherIcon').textContent = wmo.icon;
+  document.getElementById('cityName').textContent = cityName;
+  document.getElementById('tempValue').textContent = temp;
+  document.getElementById('weatherDesc').textContent = wmo.desc;
+  document.getElementById('feelsLike').textContent = feels + '°';
+  document.getElementById('humidity').textContent = hum + '%';
+  document.getElementById('windSpeed').textContent = wind + ' km/h';
+  document.getElementById('suggestion').innerHTML = `<span style="font-size:18px">💬</span> ${getSuggestion(wmo.group, temp)}`;
+  setTheme(code, temp, isDay);
+  document.getElementById('errorMsg').textContent = '';
+
+  // highlight active city button
+  document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+  const match = TAIWAN_CITIES.find(t => cityName.includes(t.name) || cityName.includes(t.en));
+  if (match) {
+    const btn = document.querySelector(`.city-btn[data-city="${match.name}"]`);
+    if (btn) btn.classList.add('active');
+  }
+}
+
+function showError(msg) { document.getElementById('errorMsg').textContent = msg; }
+
+async function searchCityCoord(lat, lon, displayName) {
+  showError('');
+  document.getElementById('loading').innerHTML = '<span class="spinner"></span>查詢中...';
+  try {
+    const data = await fetchWeather(lat, lon);
+    updateUI(data, displayName);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    document.getElementById('loading').innerHTML = '';
+  }
+}
+
+async function searchCity(city) {
+  if (!city.trim()) { showError('請輸入城市名稱'); return; }
+  showError(''); document.getElementById('loading').innerHTML = '<span class="spinner"></span>查詢中...';
+  try {
+    const trimmed = city.trim();
+    const known = TAIWAN_CITIES.find(t => trimmed.includes(t.name) || t.name.includes(trimmed) || trimmed.toLowerCase().includes(t.en));
+    if (known) {
+      const data = await fetchWeather(known.lat, known.lon);
+      updateUI(data, known.name);
+    } else {
+      const geo = await geocode(trimmed);
+      const data = await fetchWeather(geo.latitude, geo.longitude);
+      updateUI(data, geo.name + (geo.country ? `, ${geo.country}` : ''));
+    }
+  } catch (err) {
+    showError(err.message);
+    document.getElementById('weatherIcon').textContent = '😕';
+    document.getElementById('suggestion').innerHTML = '<span style="font-size:18px">💡</span> 請稍後再試';
+  } finally {
+    document.getElementById('loading').innerHTML = '';
+  }
+}
+
+async function searchByCoords(lat, lon) {
+  document.getElementById('loading').innerHTML = '<span class="spinner"></span>查詢中...';
+  try {
+    const data = await fetchWeather(lat, lon);
+    const name = await reverseGeocode(lat, lon);
+    updateUI(data, name);
+  } catch (err) { showError(err.message); }
+  finally { document.getElementById('loading').innerHTML = ''; }
+}
+
+// ===================== City sidebar =====================
+function buildCityList() {
+  const list = document.getElementById('cityList');
+  list.innerHTML = '';
+  TAIWAN_CITIES.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'city-btn';
+    btn.dataset.city = c.name;
+    btn.innerHTML = `<span class="city-emoji">${c.emoji}</span> ${c.name}`;
+    btn.addEventListener('click', () => searchCityCoord(c.lat, c.lon, c.name));
+    list.appendChild(btn);
+  });
+}
+buildCityList();
+
+// ===================== Todo =====================
+let todos = JSON.parse(localStorage.getItem('weather_todos') || '[]');
+
+function renderTodos() {
+  const list = document.getElementById('todoList');
+  const empty = document.getElementById('todoEmpty');
+  const count = document.getElementById('todoCount');
+  const doneCount = document.getElementById('todoDoneCount');
+
+  list.querySelectorAll('.todo-item').forEach(el => el.remove());
+
+  if (todos.length === 0) {
+    empty.style.display = 'block';
+    count.textContent = '0 項';
+    doneCount.textContent = '0 完成';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const done = todos.filter(t => t.done).length;
+  count.textContent = `${todos.length} 項`;
+  doneCount.textContent = `${done} 完成`;
+
+  todos.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'todo-item' + (t.done ? ' done' : '');
+
+    const check = document.createElement('span');
+    check.className = 'todo-check' + (t.done ? ' checked' : '');
+    check.textContent = t.done ? '✓' : '';
+    check.addEventListener('click', () => {
+      todos[i].done = !todos[i].done;
+      saveTodos();
+    });
+
+    const text = document.createElement('span');
+    text.className = 'todo-text';
+    text.textContent = t.text;
+
+    const del = document.createElement('button');
+    del.className = 'todo-del';
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      todos.splice(i, 1);
+      saveTodos();
+    });
+
+    div.appendChild(check);
+    div.appendChild(text);
+    div.appendChild(del);
+    list.appendChild(div);
+  });
+}
+
+function saveTodos() {
+  localStorage.setItem('weather_todos', JSON.stringify(todos));
+  renderTodos();
+}
+
+document.getElementById('todoAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('todoInput');
+  const text = input.value.trim();
+  if (!text) return;
+  todos.push({ text, done: false });
+  input.value = '';
+  saveTodos();
+});
+document.getElementById('todoInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('todoAddBtn').click();
+});
+
+renderTodos();
+
+// ===================== Event listeners =====================
+document.getElementById('searchBtn').addEventListener('click', () => {
+  searchCity(document.getElementById('cityInput').value);
+});
+document.getElementById('cityInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') searchCity(e.target.value);
+});
+document.getElementById('locateBtn').addEventListener('click', () => {
+  if (!navigator.geolocation) { showError('瀏覽器不支援定位'); return; }
+  document.getElementById('loading').innerHTML = '<span class="spinner"></span>定位中...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { searchByCoords(pos.coords.latitude, pos.coords.longitude); },
+    () => { document.getElementById('loading').innerHTML = ''; showError('無法取得位置'); },
+    { timeout: 10000 }
+  );
+});
+
+// Init
+(async function init() {
+  if (navigator.geolocation) {
+    try {
+      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+      searchByCoords(pos.coords.latitude, pos.coords.longitude);
+      return;
+    } catch {}
+  }
+  searchCity('臺北市');
+})();
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@
 
 ## 各作業詳細內容
 
+----
 ### Homework01 — C 語言編譯器 + 虛擬機
 
 - **關鍵檔案：** `compiler.c`（374 行，含 Lexer + Parser + VM）
@@ -26,6 +27,7 @@
   - 中介碼：四元組（op, arg1, arg2, result），共 20 種指令（IMM, ADD, SUB, JMP_F, CALL, RET_VAL 等）
   - 虛擬機：堆疊框架（Frame）管理區域變數、返回位址、參數傳遞，支援遞迴
 
+---
 ### Homework02 — NumScript 迷你語言
 
 - **關鍵檔案：** `lexer.py` / `compiler.py` / `vm.py` / `main.py`
@@ -36,6 +38,7 @@
   - Bytecode 指令：PUSH, LOAD, STORE, ADD, SUB, MUL, DIV, MOD, POW, CALL, PRINT_EXPR, HALT
   - 內建函式：`sqrt`, `sin`, `cos`, `abs`（對應 Python math 模組）
 
+---
 ### Homework03 — 天氣 + Todo List 網頁應用
 
 - **關鍵檔案：** `weather.html`（673 行單頁應用）
@@ -50,6 +53,7 @@
   - 響應式設計：桌面三欄（>860px）↔ 行動版垂直堆疊
   - 毛玻璃視覺效果（backdrop-filter）、浮動動畫、自訂滾動條
 
+---
 ### Homework04 — 網路通訊教材
 
 - **路徑：** `book/`，共 8 章
@@ -66,6 +70,7 @@
   | ch07 | HTTP 實作 — HTTP/1.1 Keep-Alive、HTTP/2 多工、HTTP/3 QUIC、WebSocket |
   | ch08 | 安全與優化 — TLS/SSL、攻擊類型、sendfile 零複製、Ring Buffer、核心參數調校 |
 
+---
 ### Homework05 — 執行緒同步
 
 - **關鍵檔案：** `program/bank.c` / `producer_consumer.c` / `dining_philosophers.c`
@@ -78,6 +83,7 @@
   | `dining_philosophers.c` | 哲學家聚餐 | 三版本：trylock（安全）、locked 死結演示、奇偶順序（修正） |
 - **概念涵蓋：** Race condition（含組合語言層級分析）、Critical Section、Mutex（lock/unlock/trylock）、Deadlock 四條件與預防
 
+---
 ### Homework06 — 行程管理與檔案 I/O
 
 - **關鍵檔案：** `program/` 下 7 支 C 程式
@@ -93,6 +99,7 @@
   | `06_redirect_stdout_to_file.c` | Shell `>` 重導向 | fork + dup2 + execvp（ls -la 輸出至檔案） |
   | `07_redirect_stdin_from_file.c` | Shell `<` 重導向 | fork + dup2 + execvp（wc -l 讀取檔案） |
 
+---
 ### mini_WIreshark — 原始封包嗅探器（期末專題）
 
 - **關鍵檔案：** `sniffer.py` / `packet_parser.py`

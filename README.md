@@ -1,5 +1,7 @@
 # 課程：系統程式 -- 筆記、習題與報告
 
+**全部使用AI**
+
 ## 作業總覽
 
 | 作業 | 主題 | 技術棧 | 說明 |
@@ -23,7 +25,6 @@
   - 語法分析：遞迴下降法，支援 while 迴圈（Backpatching 技術）、if 條件、函式定義與呼叫
   - 中介碼：四元組（op, arg1, arg2, result），共 20 種指令（IMM, ADD, SUB, JMP_F, CALL, RET_VAL 等）
   - 虛擬機：堆疊框架（Frame）管理區域變數、返回位址、參數傳遞，支援遞迴
-- **文件：** `while處理與呼叫機制.md` — 說明 while 編譯策略與函式呼叫的執行時期堆疊變化
 
 ### Homework02 — NumScript 迷你語言
 
@@ -34,7 +35,6 @@
   - EBNG 文法：`Expr → Term (+/- Term)*`，`Term → Factor (*/ /% Factor)*`，`Factor → Power (^ Power)*`
   - Bytecode 指令：PUSH, LOAD, STORE, ADD, SUB, MUL, DIV, MOD, POW, CALL, PRINT_EXPR, HALT
   - 內建函式：`sqrt`, `sin`, `cos`, `abs`（對應 Python math 模組）
-- **範例：** `example.ns` — 畢氏定理與圓面積計算
 
 ### Homework03 — 天氣 + Todo List 網頁應用
 
